@@ -23,8 +23,7 @@
 #define MAX_THRUST_TIME                 7700
 
 //Minimum altitude polling time between polls (milliseconds)
-//TODO: 60
-#define ALT_POLL_TIME                   1
+#define ALT_POLL_TIME                   50
 
 //Altitude in meters to deploy the parachute
 #define DEPLOY_ALTITUDE                 140

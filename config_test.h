@@ -16,18 +16,17 @@
 #define IGNITION_SUSTAIN_T              300
 
 // Apogee detection acceleration range (meters/second^2)
-#define APOGEE_ACCEL_RANGE              -12
+#define APOGEE_ACCEL_RANGE              -10
 
 //Expect deployment at 7400 ms to 7480 ms after ignitionT (assuming ignition is detected precisely)
 //This long after ignitionT, flightState will automatically move to tumble
-#define MAX_THRUST_TIME                 7700
+#define MAX_THRUST_TIME                 2000
 
 //Minimum altitude polling time between polls (milliseconds)
-//TODO: 60
 #define ALT_POLL_TIME                   1
 
 //Altitude in meters to deploy the parachute
-#define DEPLOY_ALTITUDE                 140
+#define DEPLOY_ALTITUDE                 1
 
 //Duration to sustian the detonation charge for to deploy the parachute
 #define DETONATION_DURATION_MS          2000

@@ -1,12 +1,13 @@
 #ifndef ROCKET_H
 #define ROCKET_H
 
-
-//== Change this to select test or launch settings! ==
+//============================================================
+//== Comment/uncomment this to toggle test/launch settings! ==
+//============================================================
 
 #define TEST_MODE
 
-//====================================================
+//============================================================
 
 
 #include <Wire.h>
