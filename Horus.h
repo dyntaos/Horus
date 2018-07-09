@@ -24,24 +24,29 @@
 #endif
 
 
-
+// 4-byte addresses
 #define EEPROM_APOGEE_T_ADDR            0
 #define EEPROM_DEPLOYMENT_T_ADDR        4
 #define EEPROM_TOUCHDOWN_T_ADDR         8
-#define EEPROM_MAX_ALT_ADDR             10
-#define EEPROM_LOG_IGNITION             12
-#define EEPROM_LOG_THRUST               13
-#define EEPROM_LOG_TUMBLE               14
-#define EEPROM_LOG_PARACHUTE            15
-#define EEPROM_LOG_TOUCHDOWN            16
-#define EEPROM_LOG_SYSERROR             17
-#define EEPROM_LOG_APOGEE_TIMEOUT       18
-#define EEPROM_LOG_FINALEEPROMWRITE     19
-#define EEPROM_PRESSURE_ERROR           20
-#define EEPROM_DEFAULT_CASE_ERROR       21
-#define EEPROM_HASDATA                  22
+#define EEPROM_APOGEE_ALT               12
+#define EEPROM_MAX_ALT                  16
+#define EEPROM_MIN_ALT                  20
 
-#define EEPROM_MAX_LENGTH               23
+// 1-byte addresses
+#define EEPROM_LOG_IGNITION             24
+#define EEPROM_LOG_THRUST               25
+#define EEPROM_LOG_TUMBLE               26
+#define EEPROM_LOG_PARACHUTE            27
+#define EEPROM_LOG_TOUCHDOWN            28
+#define EEPROM_LOG_SYSERROR             29
+#define EEPROM_LOG_APOGEE_TIMEOUT       30
+#define EEPROM_LOG_FINALEEPROMWRITE     31
+#define EEPROM_PRESSURE_ERROR           32
+#define EEPROM_DEFAULT_CASE_ERROR       33
+#define EEPROM_HASDATA                  34
+
+// EEPROM Values (Not addresses)
+#define EEPROM_MAX_LENGTH               28
 #define EEPROM_RESET_DELAY              10000
 
 #define DATA_UPLOAD_DELAY               5000
@@ -92,8 +97,11 @@ uint32_t ignitionT;
 uint32_t apogeeT;
 uint32_t deploymentT;
 uint32_t touchdownT;
-double maxAlt = 0;
-
+double apogeeAlt = 0.0;
+double maxAlt = 0.0;
+double writtenMaxAlt = 0.0;
+double minAlt = 0.0;
+double writtenMinAlt = 0.0;
 
 
 

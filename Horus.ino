@@ -90,6 +90,12 @@ void loop() {
   if ((t - altPollT) > ALT_POLL_TIME){
     altPollT = t;
     alt = getAltitude();
+    if (alt < minAlt){
+      minAlt = alt;
+    }
+    if (alt > maxAlt){
+      maxAlt = alt;
+    }
   }
   
   switch (flightState){
@@ -156,7 +162,6 @@ void loop() {
         ignitionT = 0;
       }else if ((millis() - ignitionT) >= IGNITION_SUSTAIN_T){
         flightState = thrust;
-        
       }
       break;
     
@@ -167,8 +172,8 @@ void loop() {
       EEPROM.write(EEPROM_LOG_THRUST, 1);
       t = millis();
       
-      if (alt > maxAlt){ //Floating point rounding errors are irrelavent and insignificant
-        maxAlt = alt;
+      if (alt > apogeeAlt){ //Floating point rounding errors are irrelavent and insignificant
+        apogeeAlt = alt;
         apogeeT = t - ignitionT;
       }
 
@@ -176,6 +181,7 @@ void loop() {
       if (vAccel >= APOGEE_ACCEL_RANGE){
         flightState = tumble;
         apogeeT = t - ignitionT;
+        writeAltToEEPROM();
       }
       
       //If max ignition + thrust time has elapsed (safety measure to ensure parachute is more likely to deploy if an error occurs)
@@ -184,6 +190,7 @@ void loop() {
         EEPROM.write(EEPROM_LOG_APOGEE_TIMEOUT, 1);
         flightState = tumble;
         apogeeT = t - ignitionT;
+        writeAltToEEPROM();
       }
       break;
 
@@ -191,7 +198,7 @@ void loop() {
       PrintSensorData("Tumble");
       log_tumble = true;
       EEPROM.write(EEPROM_LOG_TUMBLE, 1);
-      EEPROM.put(EEPROM_MAX_ALT_ADDR, maxAlt);
+      EEPROM.put(EEPROM_APOGEE_ALT, apogeeAlt);
       EEPROM.put(EEPROM_APOGEE_T_ADDR, apogeeT);
       t = millis();
       
@@ -204,6 +211,7 @@ void loop() {
         deploymentT = t - ignitionT;
         touchdownDetectT = t;
         touchdownDetectAlt = alt;
+        writeAltToEEPROM();
       }
       
       break;
@@ -252,6 +260,7 @@ void loop() {
       log_finaleepromwrite = true;
       EEPROM.write(EEPROM_LOG_FINALEEPROMWRITE, 1);
       flightState = complete;
+      writeAltToEEPROM();
       break;
 
     case complete:
@@ -297,7 +306,6 @@ void flashLED(){
 void dataExport(){
 
   Serial.println("Uploaded Data:");
-  //TODO: Export EEPROM Data to serial stream
   Serial.println("\tLogs:");
   
   Serial.print("\t\tSystem Error State:\t");
@@ -331,11 +339,19 @@ void dataExport(){
   Serial.println(EEPROM.read(EEPROM_LOG_FINALEEPROMWRITE)?"TRUE":"FALSE");
   
   Serial.println("\n\tFlight Info:");
-  Serial.print("\t\tMax Altitude:\t");
-  
   double tempDbl;
-  EEPROM.get(EEPROM_MAX_ALT_ADDR, tempDbl);
-  Serial.print(tempDbl);
+
+  Serial.print("\t\tApogee Altitude:\t");
+  EEPROM.get(EEPROM_APOGEE_ALT, tempDbl);
+  Serial.println(tempDbl);
+
+  Serial.print("\t\tMax Altitude:\t");
+  EEPROM.get(EEPROM_MAX_ALT, tempDbl);
+  Serial.println(tempDbl);
+
+  Serial.print("\t\tMin Altitude:\t");
+  EEPROM.get(EEPROM_MIN_ALT, tempDbl);
+  Serial.println(tempDbl);
   Serial.println();
 }
 
@@ -344,6 +360,18 @@ void clearEEPROM(){
     for (int i = 0; i <= EEPROM_MAX_LENGTH; i++) {
         EEPROM.write(i, 0);
     }
+}
+
+
+void writeAltToEEPROM(){
+  if (minAlt != writtenMinAlt){
+    EEPROM.put(EEPROM_MIN_ALT, minAlt);
+    writtenMinAlt = minAlt;
+  }
+  if (maxAlt != writtenMaxAlt){
+    EEPROM.put(EEPROM_MAX_ALT, maxAlt);
+    writtenMaxAlt = maxAlt;
+  }
 }
 
 
