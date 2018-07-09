@@ -48,6 +48,29 @@
 
 
 
+#ifdef ENABLE_SERIAL_DEBUGING
+#define PrintSensorData(fState)         if (millis() - debugPollT >= DEBUG_POLL_TIME){ \
+                                          Serial.print("Flight State: "); \
+                                          Serial.print(fState); \
+                                          Serial.print("\tAltitude: "); \
+                                          Serial.print(alt); \
+                                          Serial.print("\tAcceleration Scalar: "); \
+                                          Serial.print(getAccelerationScalar()); \
+                                          Serial.print("\t\tX: "); \
+                                          Serial.print(getAccelX()); \
+                                          Serial.print("\t Y: "); \
+                                          Serial.print(getAccelY()); \
+                                          Serial.print("\t Z: "); \
+                                          Serial.print(getAccelZ()); \
+                                          Serial.print("\tSwitch Input: "); \
+                                          Serial.println(digitalRead(SWITCH_PIN)?"HIGH":"LOW"); \
+                                          debugPollT = millis(); \
+                                        }
+#else
+#define PrintSensorData()               
+#endif
+
+
 
 /********************************
  *    Sensor Objects & Data     *
@@ -69,8 +92,18 @@ uint32_t ignitionT;
 uint32_t apogeeT;
 uint32_t deploymentT;
 uint32_t touchdownT;
+double maxAlt = 0;
+
+
+
+
+/************************
+ *     Misc Timers      *
+ ************************/
+
 uint32_t altPollT = 0;
-int16_t maxAlt = 0;
+uint32_t auxPollT = 0;
+
 
 
 
@@ -81,7 +114,7 @@ int16_t maxAlt = 0;
 enum e_flightState{sysError, dataUpload, erase, preLaunch, ignition, thrust, tumble, parachute, touchdown, complete};
 e_flightState flightState = preLaunch;
 bool detonationOn = false;
-int16_t alt = 0;
+double alt = 0.0;
 uint32_t touchdownDetectT = 0;
 int16_t touchdownDetectAlt = 0;
 

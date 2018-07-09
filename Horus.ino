@@ -39,25 +39,23 @@ void setup() {
   }
   
   ledTime = millis();
-  altPollT = ledTime;
+  altPollT = millis();
+  auxPollT = millis();
+  
   #ifdef ENABLE_SERIAL_DEBUGING
   debugPollT = ledTime;
   #endif
 
-  for(int i=0; i<4; i++){                 //This is repeated a few times, because loose breadboard connections were making testing finicky
-    if (digitalRead(SWITCH_PIN) == HIGH){
-        //CLEAR EEPROM
-        Serial.println("Clearing EEPROM...");
-        flightState = erase;
-        ledFlashOffTime = 50;
-        ledFlashOnTime = 50;
-        ledState = flash_on;
-        clearEEPROM();
-        altPollT = millis();
-        Serial.println("EEPROM successfully cleared...");
-        break;
-    }
-    delay(10);
+  if (digitalRead(SWITCH_PIN) == HIGH){
+      //CLEAR EEPROM
+      Serial.println("Clearing EEPROM...");
+      flightState = erase;
+      ledFlashOffTime = 50;
+      ledFlashOnTime = 50;
+      ledState = flash_on;
+      clearEEPROM();
+      auxPollT = millis();
+      Serial.println("EEPROM successfully cleared...");
   }
   
   if (EEPROM.read(EEPROM_HASDATA) != 0){
@@ -65,7 +63,7 @@ void setup() {
       ledFlashOnTime = 50;
       ledState = flash_on;
       flightState = dataUpload;
-      altPollT = millis();
+      auxPollT = millis();
   }
   
   if (flightState == preLaunch){
@@ -86,6 +84,13 @@ void loop() {
   uint16_t accelScalar;
   
   if (ledState != off) flashLED();
+
+  t = millis();
+  
+  if ((t - altPollT) > ALT_POLL_TIME){
+    altPollT = t;
+    alt = getAltitude();
+  }
   
   switch (flightState){
     
@@ -98,7 +103,7 @@ void loop() {
       
     case dataUpload:
       PrintSensorData("DataUpload")
-      if (millis() - altPollT >= DATA_UPLOAD_DELAY){
+      if (millis() - auxPollT >= DATA_UPLOAD_DELAY){
         
         #ifndef ENABLE_SERIAL_DEBUGING
         Serial.begin(SERIAL_BAUD_RATE);
@@ -110,18 +115,19 @@ void loop() {
         Serial.end();
         #endif
 
-        altPollT = millis();
+        auxPollT = millis();
       }
       
       break;
       
     case erase:
       PrintSensorData("Erase")
-      if (millis() - altPollT >= EEPROM_RESET_DELAY){
+      if (millis() - auxPollT >= EEPROM_RESET_DELAY){
           ledFlashOffTime = 250;
           ledFlashOnTime = 250;
           ledState = on;
           flightState = preLaunch;
+          
           #ifdef ENABLE_SERIAL_DEBUGING
           Serial.println("Resuming launch subroutines...");
           #endif
@@ -161,17 +167,12 @@ void loop() {
       EEPROM.write(EEPROM_LOG_THRUST, 1);
       t = millis();
       
-      if ((t - altPollT) > ALT_POLL_TIME){
-        altPollT = t;
-        alt = int16_t(getAltitude());
-        if (alt > maxAlt){
-          maxAlt = alt;
-          apogeeT = t - ignitionT;
-        }
+      if (alt > maxAlt){ //Floating point rounding errors are irrelavent and insignificant
+        maxAlt = alt;
+        apogeeT = t - ignitionT;
       }
 
       vAccel = getVerticalAccel();
-      //If APOGEE_ACCEL_RANGE
       if (vAccel >= APOGEE_ACCEL_RANGE){
         flightState = tumble;
         apogeeT = t - ignitionT;
@@ -194,19 +195,15 @@ void loop() {
       EEPROM.put(EEPROM_APOGEE_T_ADDR, apogeeT);
       t = millis();
       
-      if ((t - altPollT) > ALT_POLL_TIME){
-        altPollT = t;
-        alt = int16_t(getAltitude());
-        if (alt <= DEPLOY_ALTITUDE){
-          //DEPLOY PARACHUTE
-          flightState = parachute;
-          t = millis();
-          detonationOn = true;
-          digitalWrite(DETONATION_PIN, HIGH);
-          deploymentT = t - ignitionT;
-          touchdownDetectT = t;
-          touchdownDetectAlt = alt;
-        }
+      if (alt <= DEPLOY_ALTITUDE){
+        //DEPLOY PARACHUTE
+        flightState = parachute;
+        t = millis();
+        detonationOn = true;
+        digitalWrite(DETONATION_PIN, HIGH);
+        deploymentT = t - ignitionT;
+        touchdownDetectT = t;
+        touchdownDetectAlt = alt;
       }
       
       break;
@@ -223,11 +220,6 @@ void loop() {
           detonationOn = false;
           digitalWrite(DETONATION_PIN, LOW);
         }
-      }
-      
-      if ((t - altPollT) > ALT_POLL_TIME){
-        altPollT = t;
-        alt = int16_t(getAltitude());
       }
 
       accelScalar = getAccelerationScalar();
@@ -341,9 +333,9 @@ void dataExport(){
   Serial.println("\n\tFlight Info:");
   Serial.print("\t\tMax Altitude:\t");
   
-  int16_t temp;
-  EEPROM.get(EEPROM_MAX_ALT_ADDR, temp);
-  Serial.print(temp);
+  double tempDbl;
+  EEPROM.get(EEPROM_MAX_ALT_ADDR, tempDbl);
+  Serial.print(tempDbl);
   Serial.println();
 }
 
@@ -364,6 +356,7 @@ double getAccelerationScalar(){
   daz = az*ACCELEROMETER_MULTIPLIER;
   return sqrt((dax*dax) + (day*day) + (daz*daz));
 }
+
 
 double getAltitude(){
   //Value in meters, relative to baseline

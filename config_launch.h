@@ -63,25 +63,5 @@
 uint32_t debugPollT = 0;
 #endif
 
-#ifdef ENABLE_SERIAL_DEBUGING
-#define PrintSensorData(fState)         if (millis() - debugPollT >= DEBUG_POLL_TIME){ \
-                                          Serial.print("Flight State: "); \
-                                          Serial.print(fState); \
-                                          Serial.print("\tAltitude: "); \
-                                          Serial.print(alt); \
-                                          Serial.print("\tAcceleration Scalar: "); \
-                                          Serial.print(getAccelerationScalar()); \
-                                          Serial.print("\t\tX: "); \
-                                          Serial.print(getAccelX()); \
-                                          Serial.print("\t Y: "); \
-                                          Serial.print(getAccelY()); \
-                                          Serial.print("\t Z: "); \
-                                          Serial.println(getAccelZ()); \
-                                          debugPollT = millis(); \
-                                        }
-#else
-#define PrintSensorData()               
-#endif
-
 
 #endif

@@ -23,7 +23,7 @@
 #define MAX_THRUST_TIME                 2000
 
 //Minimum altitude polling time between polls (milliseconds)
-#define ALT_POLL_TIME                   1
+#define ALT_POLL_TIME                   25
 
 //Altitude in meters to deploy the parachute
 #define DEPLOY_ALTITUDE                 1
@@ -61,26 +61,6 @@
 #ifdef ENABLE_SERIAL_DEBUGING
 #define DEBUG_POLL_TIME                   1000
 uint32_t debugPollT = 0;
-#endif
-
-#ifdef ENABLE_SERIAL_DEBUGING
-#define PrintSensorData(fState)         if (millis() - debugPollT >= DEBUG_POLL_TIME){ \
-                                          Serial.print("Flight State: "); \
-                                          Serial.print(fState); \
-                                          Serial.print("\tAltitude: "); \
-                                          Serial.print(alt); \
-                                          Serial.print("\tAcceleration Scalar: "); \
-                                          Serial.print(getAccelerationScalar()); \
-                                          Serial.print("\t\tX: "); \
-                                          Serial.print(getAccelX()); \
-                                          Serial.print("\t Y: "); \
-                                          Serial.print(getAccelY()); \
-                                          Serial.print("\t Z: "); \
-                                          Serial.println(getAccelZ()); \
-                                          debugPollT = millis(); \
-                                        }
-#else
-#define PrintSensorData()               
 #endif
 
 
