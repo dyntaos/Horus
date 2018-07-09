@@ -24,7 +24,9 @@ More documentation will be written when the code is fully operational.
 This rocket I am designing this for is projected to fly just under 1km in altitude and if its parachute deploys at 1km, with even light winds, I will likely never recover the rocket, let alone see it again.
 
 
-## LED Codes (LED pin is set by "LED_PIN" in `config_launch.h` & `config_test.h`)
+## LED Codes
+LED output pin is set by "LED_PIN" in `config_launch.h` & `config_test.h`
+
 - Steady On:                      PreLaunch mode - System is operational and ready to be launched
 - Flashing 200ms on, 1000ms off:  Sensor Error
 - Flashing 50ms on, 50ms off:     Clearing previous flight data (EEPROM)
