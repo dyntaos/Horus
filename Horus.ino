@@ -151,8 +151,6 @@ void loop() {
 
     case ignition:
       PrintSensorData("Ignition");
-      log_ignition = true;
-      EEPROM.write(EEPROM_LOG_IGNITION, 1);
       vAccel = getVerticalAccel();
       if (vAccel > ACCEL_IGNITION_START){
         flightState = preLaunch;
@@ -249,7 +247,7 @@ void loop() {
       EEPROM.write(EEPROM_LOG_TOUCHDOWN, 1);
       EEPROM.put(EEPROM_TOUCHDOWN_T_ADDR, touchdownT);
       
-      //TODO
+      //Todo: This should be done, but review this
 
       ledFlashOffTime = 1000;
       ledFlashOnTime = 1000;
@@ -270,7 +268,19 @@ void loop() {
       PrintSensorData("-Default Case-")
       log_default_case_error = true;
       EEPROM.write(EEPROM_DEFAULT_CASE_ERROR, 1);
-      //TODO: Attempt to detect thrust, tumble or parachute and restore flightState
+      
+      //Attempt to detect previous flightState and restore flightState
+      if (log_touchdown)
+        flightState = complete;
+      else if (log_parachute)
+        flightState = touchdown;
+      else if (log_tumble)
+        flightState = parachute;
+      else if (log_thrust)
+        flightState = tumble;
+      else
+        flightState = preLaunch;
+      
       break;
       
   } 
@@ -314,9 +324,6 @@ void dataExport(){
   
   Serial.print("\t\tDefault Case Error:\t");
   Serial.println(EEPROM.read(EEPROM_DEFAULT_CASE_ERROR)?"TRUE":"FALSE");
-  
-  Serial.print("\t\tIgnition State:\t\t");
-  Serial.println(EEPROM.read(EEPROM_LOG_IGNITION)?"TRUE":"FALSE");
   
   Serial.print("\t\tThrust State:\t\t");
   Serial.println(EEPROM.read(EEPROM_LOG_THRUST)?"TRUE":"FALSE");

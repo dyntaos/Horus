@@ -33,20 +33,19 @@
 #define EEPROM_MIN_ALT                  20
 
 // 1-byte addresses
-#define EEPROM_LOG_IGNITION             24
-#define EEPROM_LOG_THRUST               25
-#define EEPROM_LOG_TUMBLE               26
-#define EEPROM_LOG_PARACHUTE            27
-#define EEPROM_LOG_TOUCHDOWN            28
-#define EEPROM_LOG_SYSERROR             29
-#define EEPROM_LOG_APOGEE_TIMEOUT       30
-#define EEPROM_LOG_FINALEEPROMWRITE     31
-#define EEPROM_PRESSURE_ERROR           32
-#define EEPROM_DEFAULT_CASE_ERROR       33
-#define EEPROM_HASDATA                  34
+#define EEPROM_LOG_THRUST               24
+#define EEPROM_LOG_TUMBLE               25
+#define EEPROM_LOG_PARACHUTE            26
+#define EEPROM_LOG_TOUCHDOWN            27
+#define EEPROM_LOG_SYSERROR             28
+#define EEPROM_LOG_APOGEE_TIMEOUT       29
+#define EEPROM_LOG_FINALEEPROMWRITE     30
+#define EEPROM_PRESSURE_ERROR           31
+#define EEPROM_DEFAULT_CASE_ERROR       32
+#define EEPROM_HASDATA                  33
 
 // EEPROM Values (Not addresses)
-#define EEPROM_MAX_LENGTH               28
+#define EEPROM_MAX_LENGTH               34
 #define EEPROM_RESET_DELAY              10000
 
 #define DATA_UPLOAD_DELAY               5000
@@ -150,7 +149,7 @@ bool ledOn = false;
 /************************
  *   Program logging    *
  ************************/
-bool log_ignition = false;
+//bool log_ignition = false;
 bool log_thrust = false;
 bool log_tumble = false;
 bool log_parachute = false;
