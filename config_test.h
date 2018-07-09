@@ -1,0 +1,88 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+
+#define ENABLE_SERIAL_DEBUGING
+#define SERIAL_BAUD_RATE                38400
+
+#define LED_PIN                         13
+#define DETONATION_PIN                  11
+#define SWITCH_PIN                      12
+
+// Meters/Sec^2 (Upward)
+#define ACCEL_IGNITION_START            -12
+
+// Time period acceleration must be sustained for to move to thrust state (milliseconds)
+#define IGNITION_SUSTAIN_T              300
+
+// Apogee detection acceleration range (meters/second^2)
+#define APOGEE_ACCEL_RANGE              -12
+
+//Expect deployment at 7400 ms to 7480 ms after ignitionT (assuming ignition is detected precisely)
+//This long after ignitionT, flightState will automatically move to tumble
+#define MAX_THRUST_TIME                 7700
+
+//Minimum altitude polling time between polls (milliseconds)
+//TODO: 60
+#define ALT_POLL_TIME                   1
+
+//Altitude in meters to deploy the parachute
+#define DEPLOY_ALTITUDE                 140
+
+//Duration to sustian the detonation charge for to deploy the parachute
+#define DETONATION_DURATION_MS          2000
+
+#define TOUCHDOWN_ALT_VARIANCE          1
+#define TOUCHDOWN_ALT_DURATION          1
+#define TOUCHDOWN_ACCEL_VARIANCE        0.6
+#define GRAVITY                         9.8
+
+/* ACCELEROMETER_FULL_RANGE_SCALE
+ * 0 = +/- 2g
+ * 1 = +/- 4g
+ * 2 = +/- 8g
+ * 3 = +/- 16g
+ */
+#define ACCELEROMETER_FULL_RANGE_SCALE  3
+#define ACCELEROMETER_MAX_VALUE         16.0*9.8
+
+// -32768 to +32767
+#define ACCELEROMETER_FULL_RANGE        32767
+#define ACCELEROMETER_MULTIPLIER        ACCELEROMETER_MAX_VALUE/ACCELEROMETER_FULL_RANGE
+
+#define getAccelX()                     mpu6050.getAccelerationX()*ACCELEROMETER_MULTIPLIER
+#define getAccelY()                     mpu6050.getAccelerationY()*ACCELEROMETER_MULTIPLIER
+#define getAccelZ()                     -mpu6050.getAccelerationZ()*ACCELEROMETER_MULTIPLIER
+
+//TODO: Axis depends on orientation of sensor in rocket
+#define getVerticalAccel()              getAccelZ()
+
+
+
+#ifdef ENABLE_SERIAL_DEBUGING
+#define DEBUG_POLL_TIME                   1000
+uint32_t debugPollT = 0;
+#endif
+
+#ifdef ENABLE_SERIAL_DEBUGING
+#define PrintSensorData(fState)         if (millis() - debugPollT >= DEBUG_POLL_TIME){ \
+                                          Serial.print("Flight State: "); \
+                                          Serial.print(fState); \
+                                          Serial.print("\tAltitude: "); \
+                                          Serial.print(alt); \
+                                          Serial.print("\tAcceleration Scalar: "); \
+                                          Serial.print(getAccelerationScalar()); \
+                                          Serial.print("\t\tX: "); \
+                                          Serial.print(getAccelX()); \
+                                          Serial.print("\t Y: "); \
+                                          Serial.print(getAccelY()); \
+                                          Serial.print("\t Z: "); \
+                                          Serial.println(getAccelZ()); \
+                                          debugPollT = millis(); \
+                                        }
+#else
+#define PrintSensorData()               
+#endif
+
+
+#endif
