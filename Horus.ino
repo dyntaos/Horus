@@ -44,7 +44,7 @@ void setup() {
   debugPollT = ledTime;
   #endif
 
-  for(int i=0; i<4; i++){
+  for(int i=0; i<4; i++){                 //This is repeated a few times, because loose breadboard connections were making testing finicky
     if (digitalRead(SWITCH_PIN) == HIGH){
         //CLEAR EEPROM
         Serial.println("Clearing EEPROM...");
@@ -84,8 +84,6 @@ void loop() {
   int16_t vAccel;
   uint32_t t;
   uint16_t accelScalar;
-  
-  //delay(500);//remove
   
   if (ledState != off) flashLED();
   
@@ -254,6 +252,10 @@ void loop() {
       EEPROM.put(EEPROM_TOUCHDOWN_T_ADDR, touchdownT);
       
       //TODO
+
+      ledFlashOffTime = 1000;
+      ledFlashOnTime = 1000;
+      ledState = flash_on;
       
       log_finaleepromwrite = true;
       EEPROM.write(EEPROM_LOG_FINALEEPROMWRITE, 1);
@@ -269,7 +271,7 @@ void loop() {
       PrintSensorData("-Default Case-")
       log_default_case_error = true;
       EEPROM.write(EEPROM_DEFAULT_CASE_ERROR, 1);
-      //TODO: Attempt to detect thrust, tumble or parachute and set flightState
+      //TODO: Attempt to detect thrust, tumble or parachute and restore flightState
       break;
       
   } 
