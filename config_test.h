@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 
-#define ENABLE_SERIAL_DEBUGING
+#define ENABLE_SERIAL_DEBUGGING
 #define SERIAL_BAUD_RATE                38400
 
 #define LED_PIN                         13
@@ -58,7 +58,7 @@
 
 
 
-#ifdef ENABLE_SERIAL_DEBUGING
+#ifdef ENABLE_SERIAL_DEBUGGING
 #define DEBUG_POLL_TIME                   1000
 uint32_t debugPollT = 0;
 #endif

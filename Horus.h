@@ -52,8 +52,8 @@
 #define DATA_UPLOAD_DELAY               5000
 
 
+#ifdef ENABLE_SERIAL_DEBUGGING
 
-#ifdef ENABLE_SERIAL_DEBUGING
 #define PrintSensorData(fState)         if (millis() - debugPollT >= DEBUG_POLL_TIME){ \
                                           Serial.print("Flight State: "); \
                                           Serial.print(fState); \
@@ -71,8 +71,12 @@
                                           Serial.println(digitalRead(SWITCH_PIN)?"HIGH":"LOW"); \
                                           debugPollT = millis(); \
                                         }
+
+#define SerialDebugMsg(msg)             Serial.println(msg)
+
 #else
 #define PrintSensorData()               
+#define SerialDebugMsg()               
 #endif
 
 

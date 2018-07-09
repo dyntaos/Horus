@@ -42,7 +42,7 @@ void setup() {
   altPollT = millis();
   auxPollT = millis();
   
-  #ifdef ENABLE_SERIAL_DEBUGING
+  #ifdef ENABLE_SERIAL_DEBUGGING
   debugPollT = ledTime;
   #endif
 
@@ -71,7 +71,7 @@ void setup() {
     EEPROM.write(EEPROM_HASDATA, 1);
   }
 
-  #ifndef ENABLE_SERIAL_DEBUGING
+  #ifndef ENABLE_SERIAL_DEBUGGING
   Serial.end();
   #endif
 }
@@ -111,13 +111,13 @@ void loop() {
       PrintSensorData("DataUpload")
       if (millis() - auxPollT >= DATA_UPLOAD_DELAY){
         
-        #ifndef ENABLE_SERIAL_DEBUGING
+        #ifndef ENABLE_SERIAL_DEBUGGING
         Serial.begin(SERIAL_BAUD_RATE);
         #endif
         
         dataExport();
         
-        #ifndef ENABLE_SERIAL_DEBUGING
+        #ifndef ENABLE_SERIAL_DEBUGGING
         Serial.end();
         #endif
 
@@ -134,9 +134,7 @@ void loop() {
           ledState = on;
           flightState = preLaunch;
           
-          #ifdef ENABLE_SERIAL_DEBUGING
-          Serial.println("Resuming launch subroutines...");
-          #endif
+          SerialDebugMsg("Resuming launch subroutines...");
       }
       break;
       
@@ -438,30 +436,22 @@ double getPressure(){
         if (status != 0){
           return(P);
         }else{
-          #ifdef ENABLE_SERIAL_DEBUGING
-          Serial.println("error retrieving pressure measurement(1)\n");
-          #endif
+          SerialDebugMsg("error retrieving pressure measurement(1)\n");
           log_pressure_error = true;
           EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
         }
       }else{
-        #ifdef ENABLE_SERIAL_DEBUGING
-        Serial.println("error starting pressure measurement(2)\n");
-        #endif
+        SerialDebugMsg("error starting pressure measurement(2)\n");
         log_pressure_error = true;
         EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
       }
     }else{
-      #ifdef ENABLE_SERIAL_DEBUGING
-      Serial.println("error retrieving temperature measurement(1)\n");
-      #endif
+      SerialDebugMsg("error retrieving temperature measurement(1)\n");
       log_pressure_error = true;
       EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
     }
   }else{
-    #ifdef ENABLE_SERIAL_DEBUGING
-    Serial.println("error starting temperature measurement(2)\n");
-    #endif
+    SerialDebugMsg("error starting temperature measurement(2)\n");
     log_pressure_error = true;
     EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
   }
