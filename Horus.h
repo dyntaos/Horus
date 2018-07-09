@@ -74,8 +74,8 @@
 #define SerialDebugMsg(msg)             Serial.println(msg)
 
 #else
-#define PrintSensorData()               
-#define SerialDebugMsg()               
+#define PrintSensorData(fState)               
+#define SerialDebugMsg(msg)               
 #endif
 
 
@@ -105,6 +105,7 @@ double maxAlt = 0.0;
 double writtenMaxAlt = 0.0;
 double minAlt = 0.0;
 double writtenMinAlt = 0.0;
+
 
 
 

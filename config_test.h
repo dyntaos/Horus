@@ -31,8 +31,8 @@
 //Duration to sustian the detonation charge for to deploy the parachute
 #define DETONATION_DURATION_MS          2000
 
-#define TOUCHDOWN_ALT_VARIANCE          1
-#define TOUCHDOWN_ALT_DURATION          1
+#define TOUCHDOWN_ALT_VARIANCE          1.0
+#define TOUCHDOWN_ALT_DURATION          1.0
 #define TOUCHDOWN_ACCEL_VARIANCE        0.6
 #define GRAVITY                         9.8
 
@@ -43,7 +43,7 @@
  * 3 = +/- 16g
  */
 #define ACCELEROMETER_FULL_RANGE_SCALE  3
-#define ACCELEROMETER_MAX_VALUE         16.0*9.8
+#define ACCELEROMETER_MAX_VALUE         16.0*GRAVITY
 
 // -32768 to +32767
 #define ACCELEROMETER_FULL_RANGE        32767
