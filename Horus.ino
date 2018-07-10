@@ -195,7 +195,7 @@ void loop() {
       log_tumble = true;
       EEPROM.write(EEPROM_LOG_TUMBLE, 1);
       EEPROM.put(EEPROM_APOGEE_ALT, apogeeAlt);
-      EEPROM.put(EEPROM_APOGEE_T_ADDR, apogeeT);
+      EEPROM.put(EEPROM_APOGEE_TIME, apogeeT);
       t = millis();
       
       if (alt <= DEPLOY_ALTITUDE){
@@ -216,7 +216,7 @@ void loop() {
       PrintSensorData("Parachute");
       log_parachute = true;
       EEPROM.write(EEPROM_LOG_PARACHUTE, 1);
-      EEPROM.put(EEPROM_DEPLOYMENT_T_ADDR, deploymentT);
+      EEPROM.put(EEPROM_DEPLOYMENT_TIME, deploymentT);
       t = millis();
       
       if (detonationOn){
@@ -245,10 +245,8 @@ void loop() {
       PrintSensorData("Touchdown");
       log_touchdown = true;
       EEPROM.write(EEPROM_LOG_TOUCHDOWN, 1);
-      EEPROM.put(EEPROM_TOUCHDOWN_T_ADDR, touchdownT);
+      EEPROM.put(EEPROM_TOUCHDOWN_TIME, touchdownT);
       
-      //Todo: This should be done, but review this
-
       ledFlashOffTime = 1000;
       ledFlashOnTime = 1000;
       ledState = flash_on;
@@ -316,47 +314,65 @@ void dataExport(){
   Serial.println("Uploaded Data:");
   Serial.println("\tLogs:");
   
-  Serial.print("\t\tSystem Error State:\t");
+  Serial.print("\t\tSystem error state:\t");
   Serial.println(EEPROM.read(EEPROM_LOG_SYSERROR)?"TRUE":"FALSE");
   
-  Serial.print("\t\tPressure Error:\t\t");
+  Serial.print("\t\tPressure error:\t\t");
   Serial.println(EEPROM.read(EEPROM_PRESSURE_ERROR)?"TRUE":"FALSE");
   
-  Serial.print("\t\tDefault Case Error:\t");
+  Serial.print("\t\tDefault case error:\t");
   Serial.println(EEPROM.read(EEPROM_DEFAULT_CASE_ERROR)?"TRUE":"FALSE");
   
-  Serial.print("\t\tThrust State:\t\t");
+  Serial.print("\t\tThrust state:\t\t");
   Serial.println(EEPROM.read(EEPROM_LOG_THRUST)?"TRUE":"FALSE");
   
-  Serial.print("\t\tApogee Timeout:\t\t");
+  Serial.print("\t\tApogee timeout:\t\t");
   Serial.println(EEPROM.read(EEPROM_LOG_APOGEE_TIMEOUT)?"TRUE":"FALSE");
   
-  Serial.print("\t\tTumble State:\t\t");
+  Serial.print("\t\tTumble state:\t\t");
   Serial.println(EEPROM.read(EEPROM_LOG_TUMBLE)?"TRUE":"FALSE");
   
-  Serial.print("\t\tParachute State:\t");
+  Serial.print("\t\tParachute state:\t");
   Serial.println(EEPROM.read(EEPROM_LOG_PARACHUTE)?"TRUE":"FALSE");
   
-  Serial.print("\t\tTouchdown State:\t");
+  Serial.print("\t\tTouchdown state:\t");
   Serial.println(EEPROM.read(EEPROM_LOG_TOUCHDOWN)?"TRUE":"FALSE");
   
-  Serial.print("\t\tFinal EEPROM Write:\t");
+  Serial.print("\t\tFinal EEPROM write:\t");
   Serial.println(EEPROM.read(EEPROM_LOG_FINALEEPROMWRITE)?"TRUE":"FALSE");
   
   Serial.println("\n\tFlight Info:");
   double tempDbl;
 
-  Serial.print("\t\tApogee Altitude:\t");
+  Serial.print("\t\tApogee altitude:\t");
   EEPROM.get(EEPROM_APOGEE_ALT, tempDbl);
   Serial.println(tempDbl);
 
-  Serial.print("\t\tMax Altitude:\t");
+  Serial.print("\t\tMax altitude:\t");
   EEPROM.get(EEPROM_MAX_ALT, tempDbl);
   Serial.println(tempDbl);
 
-  Serial.print("\t\tMin Altitude:\t");
+  Serial.print("\t\tMin altitude:\t");
   EEPROM.get(EEPROM_MIN_ALT, tempDbl);
   Serial.println(tempDbl);
+
+  uint32_t tempLong;
+  
+  Serial.print("\t\tTime to apogee:\t");
+  EEPROM.get(EEPROM_APOGEE_TIME, tempLong);
+  Serial.print(tempLong/1000.0);
+  Serial.println(" sec");
+
+  Serial.print("\t\tTime to deployment:\t");
+  EEPROM.get(EEPROM_DEPLOYMENT_TIME, tempLong);
+  Serial.print(tempLong/1000.0);
+  Serial.println(" sec");
+
+  Serial.print("\t\tTime to touchdown:\t");
+  EEPROM.get(EEPROM_TOUCHDOWN_TIME, tempLong);
+  Serial.print(tempLong/1000.0);
+  Serial.println(" sec");
+  
   Serial.println();
 }
 

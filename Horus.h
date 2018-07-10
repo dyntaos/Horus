@@ -25,9 +25,9 @@
 
 
 // 4-byte addresses
-#define EEPROM_APOGEE_T_ADDR            0
-#define EEPROM_DEPLOYMENT_T_ADDR        4
-#define EEPROM_TOUCHDOWN_T_ADDR         8
+#define EEPROM_APOGEE_TIME              0
+#define EEPROM_DEPLOYMENT_TIME          4
+#define EEPROM_TOUCHDOWN_TIME           8
 #define EEPROM_APOGEE_ALT               12
 #define EEPROM_MAX_ALT                  16
 #define EEPROM_MIN_ALT                  20
