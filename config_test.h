@@ -1,7 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-
 #define ENABLE_SERIAL_DEBUGGING
 #define SERIAL_BAUD_RATE                38400
 
@@ -25,10 +24,13 @@
 //Minimum altitude polling time between polls (milliseconds)
 #define ALT_POLL_TIME                   25
 
+//Log the altitude to EEPROM every multiple of ALT_LOG_INTERVAL after ignitionT until EEPROM is full
+#define ALT_LOG_INTERVAL                200
+
 //Altitude in meters to deploy the parachute
 #define DEPLOY_ALTITUDE                 1
 
-//Duration to sustian the detonation charge for to deploy the parachute
+//Duration to sustain the detonation charge for to deploy the parachute
 #define DETONATION_DURATION_MS          2000
 
 #define TOUCHDOWN_ALT_VARIANCE          1.0
@@ -56,12 +58,9 @@
 //TODO: Axis depends on orientation of sensor in rocket
 #define getVerticalAccel()              getAccelZ()
 
-
-
 #ifdef ENABLE_SERIAL_DEBUGGING
 #define DEBUG_POLL_TIME                   1000
 uint32_t debugPollT = 0;
 #endif
-
 
 #endif
