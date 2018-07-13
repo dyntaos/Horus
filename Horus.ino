@@ -57,7 +57,7 @@ void setup() {
         SerialDebugMsg(F("EEPROM successfully cleared..."));
     }
     
-    if (EEPROM.read(EEPROM_HASDATA) != 0) {
+    if (!getFlag(EEPROM_HASDATA)) {
         ledFlashOffTime = 200;
         ledFlashOnTime = 50;
         ledState = flash_on;
@@ -67,7 +67,7 @@ void setup() {
     
     if (flightState == preLaunch) {
         ledState = on;
-        EEPROM.write(EEPROM_HASDATA, 1);
+        setFlag(EEPROM_HASDATA, true);
     }
     
 #ifndef ENABLE_SERIAL_DEBUGGING
@@ -99,14 +99,14 @@ void loop() {
     switch (flightState) {
 
         case sysError:
-            PrintSensorData(F("SysError"))
+            PrintSensorData(F("SysError"));
             log_syserror = true;
-            EEPROM.write(EEPROM_LOG_SYSERROR, 1);
+            setFlag(EEPROM_LOG_SYSERROR, true);
             log_finaleepromwrite = true;
             break;
 
         case dataUpload:
-            PrintSensorData(F("DataUpload"))
+            PrintSensorData(F("DataUpload"));
             if (millis() - auxPollT >= DATA_UPLOAD_DELAY) {
 
 #ifndef ENABLE_SERIAL_DEBUGGING
@@ -125,7 +125,7 @@ void loop() {
             break;
 
         case erase:
-            PrintSensorData(F("Erase"))
+            PrintSensorData(F("Erase"));
             if (millis() - auxPollT >= EEPROM_RESET_DELAY) {
                 ledFlashOffTime = 250;
                 ledFlashOnTime = 250;
@@ -137,36 +137,37 @@ void loop() {
             break;
 
         case preLaunch:
-            PrintSensorData(F("PreLaunch"))
-            ;
+            PrintSensorData(F("PreLaunch"));
             vAccel = getVerticalAccel();
 
             if (vAccel <= ACCEL_IGNITION_START) {
                 ledState = off;
                 flightState = ignition;
                 ignitionT = millis();
+                altIncrementalLogTime = ignitionT + ALT_LOG_INTERVAL;
             }
             break;
 
         case ignition:
-            PrintSensorData(F("Ignition"))
-            ;
+            PrintSensorData(F("Ignition"));
+            logIncrementalAltitude();
             vAccel = getVerticalAccel();
             if (vAccel > ACCEL_IGNITION_START) {
                 flightState = preLaunch;
                 ledState = on;
                 ignitionT = 0;
+                resetPack();
             } else if ((millis() - ignitionT) >= IGNITION_SUSTAIN_T) {
                 flightState = thrust;
             }
             break;
 
         case thrust:
-            PrintSensorData(F("Thrust"))
-            ;
+            PrintSensorData(F("Thrust"));
+            logIncrementalAltitude();
             accelScalar = getAccelerationScalar();
             log_thrust = true;
-            EEPROM.write(EEPROM_LOG_THRUST, 1);
+            setFlag(EEPROM_LOG_THRUST, true);
             t = millis();
 
             if (alt > apogeeAlt) { //Floating point rounding errors are irrelavent and insignificant
@@ -184,7 +185,7 @@ void loop() {
             //If max ignition + thrust time has elapsed (safety measure to ensure parachute is more likely to deploy if an error occurs)
             if ((t - ignitionT) >= MAX_THRUST_TIME) {
                 log_apogee_timeout = true;
-                EEPROM.write(EEPROM_LOG_APOGEE_TIMEOUT, 1);
+                setFlag(EEPROM_LOG_APOGEE_TIMEOUT, true);
                 flightState = tumble;
                 apogeeT = t - ignitionT;
                 writeAltToEEPROM();
@@ -192,10 +193,10 @@ void loop() {
             break;
 
         case tumble:
-            PrintSensorData(F("Tumble"))
-            ;
+            PrintSensorData(F("Tumble"));
+            logIncrementalAltitude();
             log_tumble = true;
-            EEPROM.write(EEPROM_LOG_TUMBLE, 1);
+            setFlag(EEPROM_LOG_TUMBLE, true);
             EEPROM.put(EEPROM_APOGEE_ALT, apogeeAlt);
             EEPROM.put(EEPROM_APOGEE_TIME, apogeeT);
             t = millis();
@@ -215,10 +216,10 @@ void loop() {
             break;
 
         case parachute:
-            PrintSensorData(F("Parachute"))
-            ;
+            PrintSensorData(F("Parachute"));
+            logIncrementalAltitude();
             log_parachute = true;
-            EEPROM.write(EEPROM_LOG_PARACHUTE, 1);
+            setFlag(EEPROM_LOG_PARACHUTE, true);
             EEPROM.put(EEPROM_DEPLOYMENT_TIME, deploymentT);
             t = millis();
 
@@ -245,10 +246,10 @@ void loop() {
             break;
 
         case touchdown:
-            PrintSensorData(F("Touchdown"))
-            ;
+            PrintSensorData(F("Touchdown"));
+            logIncrementalAltitude();
             log_touchdown = true;
-            EEPROM.write(EEPROM_LOG_TOUCHDOWN, 1);
+            setFlag(EEPROM_LOG_TOUCHDOWN, true);
             EEPROM.put(EEPROM_TOUCHDOWN_TIME, touchdownT);
 
             ledFlashOffTime = 1000;
@@ -256,21 +257,21 @@ void loop() {
             ledState = flash_on;
 
             log_finaleepromwrite = true;
-            EEPROM.write(EEPROM_LOG_FINALEEPROMWRITE, 1);
+            setFlag(EEPROM_LOG_FINALEEPROMWRITE, true);
             flightState = complete;
             writeAltToEEPROM();
             break;
 
         case complete:
-            PrintSensorData(F("Complete"))
-            ;
+            PrintSensorData(F("Complete"));
+            logIncrementalAltitude();
             //Sit idle
             break;
 
         default:
-            PrintSensorData(F("-Default Case-"))
+            PrintSensorData(F("-Default Case-"));
             log_default_case_error = true;
-            EEPROM.write(EEPROM_DEFAULT_CASE_ERROR, 1);
+            setFlag(EEPROM_DEFAULT_CASE_ERROR, true);
 
             //Attempt to detect previous flightState and restore flightState
             if (log_touchdown)
@@ -318,31 +319,31 @@ void dataExport() {
     Serial.println(F("\tLogs:"));
 
     Serial.print(F("\t\tSystem error state:\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_SYSERROR) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_SYSERROR) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tPressure error:\t\t"));
-    Serial.println(EEPROM.read(EEPROM_PRESSURE_ERROR) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_PRESSURE_ERROR) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tDefault case error:\t"));
-    Serial.println(EEPROM.read(EEPROM_DEFAULT_CASE_ERROR) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_DEFAULT_CASE_ERROR) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tThrust state:\t\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_THRUST) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_THRUST) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tApogee timeout:\t\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_APOGEE_TIMEOUT) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_APOGEE_TIMEOUT) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tTumble state:\t\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_TUMBLE) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_TUMBLE) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tParachute state:\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_PARACHUTE) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_PARACHUTE) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tTouchdown state:\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_TOUCHDOWN) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_TOUCHDOWN) ? F("TRUE") : F("FALSE"));
 
     Serial.print(F("\t\tFinal EEPROM write:\t"));
-    Serial.println(EEPROM.read(EEPROM_LOG_FINALEEPROMWRITE) ? F("TRUE") : F("FALSE"));
+    Serial.println(getFlag(EEPROM_LOG_FINALEEPROMWRITE) ? F("TRUE") : F("FALSE"));
 
     Serial.println(F("\n\tFlight Info:"));
     double tempDbl;
@@ -385,16 +386,6 @@ void clearEEPROM() {
     }
 }
 
-void writeAltToEEPROM() {
-    if (minAlt != writtenMinAlt) {
-        EEPROM.put(EEPROM_MIN_ALT, minAlt);
-        writtenMinAlt = minAlt;
-    }
-    if (maxAlt != writtenMaxAlt) {
-        EEPROM.put(EEPROM_MAX_ALT, maxAlt);
-        writtenMaxAlt = maxAlt;
-    }
-}
 
 double getAccelerationScalar() {
     int16_t ax, ay, az;
@@ -458,23 +449,23 @@ double getPressure() {
                     return (P);
                 } else {
                     SerialDebugMsg(F("error retrieving pressure measurement(1)\n"));
+                    if (!log_pressure_error) setFlag(EEPROM_PRESSURE_ERROR, true);
                     log_pressure_error = true;
-                    EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
                 }
             } else {
                 SerialDebugMsg(F("error starting pressure measurement(2)\n"));
+                if (!log_pressure_error) setFlag(EEPROM_PRESSURE_ERROR, true);
                 log_pressure_error = true;
-                EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
             }
         } else {
             SerialDebugMsg(F("error retrieving temperature measurement(1)\n"));
+            if (!log_pressure_error) setFlag(EEPROM_PRESSURE_ERROR, true);
             log_pressure_error = true;
-            EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
         }
     } else {
         SerialDebugMsg(F("error starting temperature measurement(2)\n"));
+        if (!log_pressure_error) setFlag(EEPROM_PRESSURE_ERROR, true);
         log_pressure_error = true;
-        EEPROM.write(EEPROM_PRESSURE_ERROR, 1);
     }
     return 0.0;
 }

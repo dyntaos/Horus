@@ -12,7 +12,17 @@ bool dataNotWritten = false;
 
 static const uint16_t bitMask = 0b0000001111111111;
 
+bool getFlag(uint8_t n) {
+    uint8_t EEPROM_Addr = (n / 8) + EEPROM_BASE_FLAG_ADDR;   //Get EEPROM address
+    return (bool) (EEPROM_Addr >> (n - ((n / 8) * 8))) & 1U; //Extract flag from byte and return as boolean
+}
 
+void setFlag(uint8_t n, bool val) {
+    uint8_t EEPROM_Addr = (n / 8) + EEPROM_BASE_FLAG_ADDR;
+    uint8_t temp = EEPROM.read(EEPROM_Addr);
+    temp |= val << (n - ((n / 8) * 8));
+    EEPROM.write(EEPROM_Addr, temp);
+}
 
 /**
  * Pack a 10-bit number into a byte array in the EEPROM
@@ -52,6 +62,13 @@ void packEEPROM(uint16_t data) {
             }
         }
     }
+}
+
+void resetPack() {
+    curAddr = EEPROM_ALT_LOG_START;
+    remainderBits = 0;
+    dataNotWritten = false;
+    buffer = 0;
 }
 
 /**
