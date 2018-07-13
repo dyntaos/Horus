@@ -25,7 +25,7 @@
 #define ALT_POLL_TIME                   25
 
 //Log the altitude to EEPROM every multiple of ALT_LOG_INTERVAL after ignitionT until EEPROM is full
-#define ALT_LOG_INTERVAL                200
+#define ALT_LOG_INTERVAL                50
 
 //Altitude in meters to deploy the parachute
 #define DEPLOY_ALTITUDE                 1

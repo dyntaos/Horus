@@ -129,7 +129,7 @@ bool ledOn = false;
 /************************
  *   Program logging    *
  ************************/
-//bool log_ignition = false;
+
 bool log_thrust = false;
 bool log_tumble = false;
 bool log_parachute = false;
