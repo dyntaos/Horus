@@ -16,57 +16,16 @@
 #include "MPU6050.h"
 
 #include "EEPROM_Packing.h"
-#include <EEPROM.h>
 
 
 #ifdef TEST_MODE
-#include "config_test.h"
+    #include "config_test.h"
 #else
-#include "config_launch.h"
+    #include "config_launch.h"
 #endif
 
 #define DATA_UPLOAD_DELAY               5000
 
-#ifdef ENABLE_SERIAL_DEBUGGING
-
-#define PrintSensorData(fState)         do { if (millis() - debugPollT >= DEBUG_POLL_TIME) { \
-                                              Serial.print("Flight State: "); \
-                                              Serial.print(fState); \
-                                              Serial.print("\tAltitude: "); \
-                                              Serial.print(alt); \
-                                              Serial.print("\tAcceleration Scalar: "); \
-                                              Serial.print(getAccelerationScalar()); \
-                                              Serial.print("\t\tX: "); \
-                                              Serial.print(getAccelX()); \
-                                              Serial.print("\t Y: "); \
-                                              Serial.print(getAccelY()); \
-                                              Serial.print("\t Z: "); \
-                                              Serial.print(getAccelZ()); \
-                                              Serial.print("\tSwitch Input: "); \
-                                              Serial.println(digitalRead(SWITCH_PIN)?"HIGH":"LOW"); \
-                                              debugPollT = millis(); \
-                                        } } while(0)
-
-#define SerialDebugMsg(msg)             Serial.println(msg)
-
-#else
-#define PrintSensorData(fState)
-#define SerialDebugMsg(msg)
-#endif
-
-#define logIncrementalAltitude()        do { if (millis() >= altIncrementalLogTime) { \
-                                                altIncrementalLogTime = millis(); \
-                                                packEEPROM(alt); \
-                                        } } while (0)
-
-#define writeAltToEEPROM()              do { if (minAlt != writtenMinAlt) { \
-                                                EEPROM.put(EEPROM_MIN_ALT, minAlt); \
-                                                writtenMinAlt = minAlt; \
-                                            } \
-                                            if (maxAlt != writtenMaxAlt) { \
-                                                EEPROM.put(EEPROM_MAX_ALT, maxAlt); \
-                                                writtenMaxAlt = maxAlt; \
-                                        } } while(0)
 
 /********************************
  *    Sensor Objects & Data     *

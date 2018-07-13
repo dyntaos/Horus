@@ -1,5 +1,52 @@
 #include "Horus.h"
 
+#ifdef ENABLE_SERIAL_DEBUGGING
+    inline void PrintSensorData(const __FlashStringHelper* fState) {
+        if (millis() - debugPollT >= DEBUG_POLL_TIME) {
+            Serial.print("Flight State: ");
+            Serial.print(fState);
+            Serial.print("\tAltitude: ");
+            Serial.print(alt);
+            Serial.print("\tAcceleration Scalar: ");
+            Serial.print(getAccelerationScalar());
+            Serial.print("\t\tX: ");
+            Serial.print(getAccelX());
+            Serial.print("\t Y: ");
+            Serial.print(getAccelY());
+            Serial.print("\t Z: ");
+            Serial.print(getAccelZ());
+            Serial.print("\tSwitch Input: ");
+            Serial.println(digitalRead(SWITCH_PIN)?"HIGH":"LOW");
+            debugPollT = millis();
+        }
+    }
+
+    #define SerialDebugMsg(msg)             Serial.println(msg)
+
+#else
+    inline void PrintSensorData(const __FlashStringHelper* fState) {}
+    #define SerialDebugMsg(msg)
+#endif
+
+inline void logIncrementalAltitude() {
+    if (millis() >= altIncrementalLogTime) {
+        altIncrementalLogTime = millis();
+        packEEPROM(alt);
+    }
+}
+
+inline void writeAltToEEPROM() {
+    if (minAlt != writtenMinAlt) {
+        EEPROM.put(EEPROM_MIN_ALT, minAlt);
+        writtenMinAlt = minAlt;
+    }
+    if (maxAlt != writtenMaxAlt) {
+        EEPROM.put(EEPROM_MAX_ALT, maxAlt);
+        writtenMaxAlt = maxAlt;
+    }
+}
+
+
 void setup() {
     Serial.begin(SERIAL_BAUD_RATE);
     Wire.begin();

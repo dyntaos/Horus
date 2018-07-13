@@ -59,8 +59,8 @@
 #define getVerticalAccel()              getAccelZ()
 
 #ifdef ENABLE_SERIAL_DEBUGGING
-#define DEBUG_POLL_TIME                   1000
-uint32_t debugPollT = 0;
+    #define DEBUG_POLL_TIME                   1000
+    uint32_t debugPollT = 0;
 #endif
 
 #endif
