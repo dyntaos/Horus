@@ -8,7 +8,10 @@
 
 #define LED_PIN                         13
 #define DETONATION_PIN                  11
-#define RESET_PIN                      12
+#define BUTTON_PIN                      12
+
+//How long the button must be depressed during boot (actual time will be slightly longer, as this does not include initialization time) to clear the EEPROM (ms)
+#define EEPROM_RESET_TIME               5000
 
 // Meters/Sec^2 (Upward)
 #define ACCEL_IGNITION_START            -12

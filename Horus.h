@@ -8,6 +8,8 @@
 #define TEST_MODE
 
 //============================================================
+
+
 #include <Wire.h>
 
 #include "SFE_BMP180.h"
@@ -15,6 +17,7 @@
 #include "MPU6050.h"
 
 #include "EEPROM_Packing.h"
+
 
 #ifdef TEST_MODE
     #include "config_test.h"

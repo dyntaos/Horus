@@ -4,15 +4,17 @@
 #include <EEPROM.h>
 #include <stdint.h>
 
-// 4-byte addresses
+
 #define EEPROM_APOGEE_TIME              0
 #define EEPROM_DEPLOYMENT_TIME          4
 #define EEPROM_TOUCHDOWN_TIME           8
 #define EEPROM_APOGEE_ALT               12
-#define EEPROM_MAX_ALT                  16
-#define EEPROM_MIN_ALT                  20
-#define EEPROM_ALT_BASELINE             24
-#define EEPROM_BOOT_MS                  28
+#define EEPROM_MAX_ALT                  14
+#define EEPROM_MIN_ALT                  16
+#define EEPROM_PRESSURE_BASELINE        18
+#define EEPROM_BASE_FLAG_ADDR           22
+#define EEPROM_ALT_LOG_START            24
+#define EEPROM_ALT_LOG_END              1023
 
 // Bit addresses (relative to EEPROM_BASE_FLAG_ADDR)
 #define EEPROM_LOG_THRUST               0
@@ -24,14 +26,12 @@
 #define EEPROM_LOG_FINALEEPROMWRITE     6
 #define EEPROM_PRESSURE_ERROR           7
 #define EEPROM_DEFAULT_CASE_ERROR       8
-#define EEPROM_HASDATA                  9
+#define EEPROM_POWER_LOSS_RECOVERY      9
+#define EEPROM_HASDATA                  10
 
 // EEPROM Values (Not addresses)
-#define EEPROM_BASE_FLAG_ADDR           30
 #define EEPROM_MAX_LENGTH               1023
 #define EEPROM_RESET_DELAY              10000
-#define EEPROM_ALT_LOG_START            32
-#define EEPROM_ALT_LOG_END              1023
 
 
 bool getFlag(uint8_t n);

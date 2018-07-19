@@ -32,6 +32,9 @@ uint32_t auxPollT = 0;
 uint32_t altIncrementalLogTime = 0;
 uint32_t altMinMaxIncrementalLogTime = 0;
 
+uint32_t resetTimer = 0;
+bool resetMode = false;
+
 /************************
  *    Flight States     *
  ************************/
@@ -40,6 +43,7 @@ enum e_flightState {
     sysError, dataUpload, erase, preLaunch, ignition, thrust, tumble, parachute, touchdown, complete
 };
 e_flightState flightState = preLaunch;
+bool powerLossRecoveryState = false;
 bool detonationOn = false;
 int16_t alt = 0;
 uint32_t touchdownDetectT = 0;
@@ -94,7 +98,7 @@ bool log_default_case_error = false;
             Serial.print("\t Z: ");
             Serial.print(getAccelZ());
             Serial.print("\tSwitch Input: ");
-            Serial.println(digitalRead(RESET_PIN)?"HIGH":"LOW");
+            Serial.println(digitalRead(BUTTON_PIN)?"HIGH":"LOW");
             debugPollT = millis();
         }
     }
@@ -111,6 +115,20 @@ inline void logIncrementalAltitude() {
         altIncrementalLogTime = millis() + ALT_LOG_INTERVAL;
         packEEPROM(alt);
     }
+}
+
+inline void recoverFlightState() {
+  //Attempt to detect previous flightState and restore flightState
+  if (log_touchdown)
+    flightState = complete;
+  else if (log_parachute)
+    flightState = touchdown;
+  else if (log_tumble)
+    flightState = parachute;
+  else if (log_thrust)
+    flightState = tumble;
+  else
+    flightState = preLaunch;
 }
 
 inline void writeAltMinMax() {
@@ -134,10 +152,53 @@ void setup() {
 
     pinMode(LED_PIN, OUTPUT);
     pinMode(DETONATION_PIN, OUTPUT);
-    pinMode(RESET_PIN, INPUT);
+    pinMode(BUTTON_PIN, INPUT);
     digitalWrite(DETONATION_PIN, LOW);
-
-    dataExport();
+    
+    if (digitalRead(BUTTON_PIN) == HIGH) {
+        //dataUpload mode (to select either dataUpload or erase)
+        SerialDebugMsg(F("Entering data upload mode..."));
+        
+        flightState = dataUpload;
+        ledFlashOffTime = 200;
+        ledFlashOnTime = 50;
+        ledState = flash_on;
+        auxPollT = millis();
+        
+    }else if (getFlag(EEPROM_HASDATA)) {
+      
+      SerialDebugMsg(F("EEPROM has data..."));
+      
+      if (!getFlag(EEPROM_LOG_FINALEEPROMWRITE)) {
+        //Recover from potential power loss!
+        SerialDebugMsg(F("Recovering from power loss!"));
+        
+        log_thrust = getFlag(EEPROM_LOG_THRUST);
+        log_tumble = getFlag(EEPROM_LOG_TUMBLE);
+        log_parachute = getFlag(EEPROM_LOG_PARACHUTE);
+        log_touchdown = getFlag(EEPROM_LOG_TOUCHDOWN);
+        log_syserror = getFlag(EEPROM_LOG_SYSERROR);
+        log_apogee_timeout = getFlag(EEPROM_LOG_APOGEE_TIMEOUT);
+        log_finaleepromwrite = getFlag(EEPROM_LOG_FINALEEPROMWRITE);
+        log_pressure_error = getFlag(EEPROM_PRESSURE_ERROR);
+        log_default_case_error = getFlag(EEPROM_DEFAULT_CASE_ERROR);
+        EEPROM.get(EEPROM_PRESSURE_BASELINE, baseline);
+        
+        recoverFlightState();
+        powerLossRecoveryState = true;
+        setFlag(EEPROM_POWER_LOSS_RECOVERY, true); //If we recovered from a power loss, timing values are not valid unfortunately, but at least we can attempt to ensure the parachute deploys at the preset altitude
+      
+      }else {
+        //Full flight was complete, upload data
+        SerialDebugMsg(F("Previous data log was complete, entering upload mode..."));
+        
+        ledFlashOffTime = 200;
+        ledFlashOnTime = 50;
+        ledState = flash_on;
+        flightState = dataUpload;
+        auxPollT = millis();
+      }
+    }
 
     /* Initialize the MPU-6050 accelerometer */
     mpu6050.initialize();
@@ -156,7 +217,10 @@ void setup() {
     /* Initialize the BMP180 altimeter */
     if (pressure.begin()) {
         SerialDebugMsg(F("BMP180 altimeter initialized..."));
-        baseline = getPressure();
+        if (!powerLossRecoveryState) {
+          baseline = getPressure();
+          EEPROM.put(EEPROM_PRESSURE_BASELINE, baseline);
+        }
     } else {
         flightState = sysError;
 
@@ -172,26 +236,6 @@ void setup() {
 #ifdef ENABLE_SERIAL_DEBUGGING
     debugPollT = ledTime;
 #endif
-
-    if (digitalRead(RESET_PIN) == HIGH) {
-        //CLEAR EEPROM
-        SerialDebugMsg(F("Clearing EEPROM..."));
-        flightState = erase;
-        ledFlashOffTime = 50;
-        ledFlashOnTime = 50;
-        ledState = flash_on;
-        clearEEPROM();
-        auxPollT = millis();
-        SerialDebugMsg(F("EEPROM successfully cleared..."));
-    }
-    
-    if (!getFlag(EEPROM_HASDATA)) {
-        ledFlashOffTime = 200;
-        ledFlashOnTime = 50;
-        ledState = flash_on;
-        flightState = dataUpload;
-        auxPollT = millis();
-    }
     
     if (flightState == preLaunch) {
         ledState = on;
@@ -234,22 +278,35 @@ void loop() {
             break;
 
         case dataUpload:
-            PrintSensorData(F("DataUpload"));
+            PrintSensorData(F("Data upload:"));
+
             if (millis() - auxPollT >= DATA_UPLOAD_DELAY) {
-
-#ifndef ENABLE_SERIAL_DEBUGGING
-                Serial.begin(SERIAL_BAUD_RATE);
-#endif
-
+                #ifndef ENABLE_SERIAL_DEBUGGING
+                    Serial.begin(SERIAL_BAUD_RATE);
+                #endif
                 dataExport();
-
-#ifndef ENABLE_SERIAL_DEBUGGING
-                Serial.end();
-#endif
-
+                #ifndef ENABLE_SERIAL_DEBUGGING
+                    Serial.end();
+                #endif
                 auxPollT = millis();
             }
 
+            if (digitalRead(BUTTON_PIN) == HIGH && !resetMode) {
+                resetMode = true;
+                resetTimer = millis() + EEPROM_RESET_TIME;
+            }else if (digitalRead(BUTTON_PIN) == LOW) {
+                resetMode = false;
+            }else if (millis() >= resetTimer) {
+                SerialDebugMsg(F("Clearing EEPROM..."));
+                clearEEPROM();
+                flightState = erase;
+                ledFlashOffTime = 50;
+                ledFlashOnTime = 50;
+                ledState = flash_on;
+                auxPollT = millis();
+                SerialDebugMsg(F("EEPROM successfully cleared..."));
+            }
+            
             break;
 
         case erase:
@@ -303,9 +360,12 @@ void loop() {
             logIncrementalAltitude();
             writeAltMinMax();
             
+            if (!log_thrust) {
+              log_thrust = true;
+              setFlag(EEPROM_LOG_THRUST, true);
+            }
+            
             accelScalar = getAccelerationScalar();
-            log_thrust = true;
-            setFlag(EEPROM_LOG_THRUST, true);
             t = millis();
 
             if (alt > apogeeAlt) { //Floating point rounding errors are irrelevant and insignificant
@@ -333,11 +393,13 @@ void loop() {
             
             logIncrementalAltitude();
             writeAltMinMax();
-            
-            log_tumble = true;
-            setFlag(EEPROM_LOG_TUMBLE, true);
-            EEPROM.put(EEPROM_APOGEE_ALT, apogeeAlt);
-            EEPROM.put(EEPROM_APOGEE_TIME, apogeeT);
+
+            if (!log_tumble) {
+              log_tumble = true;
+              setFlag(EEPROM_LOG_TUMBLE, true);
+              EEPROM.put(EEPROM_APOGEE_ALT, apogeeAlt);
+              EEPROM.put(EEPROM_APOGEE_TIME, apogeeT);
+            }
             t = millis();
 
             if (alt <= DEPLOY_ALTITUDE) {
@@ -358,10 +420,12 @@ void loop() {
             
             logIncrementalAltitude();
             writeAltMinMax();
-            
-            log_parachute = true;
-            setFlag(EEPROM_LOG_PARACHUTE, true);
-            EEPROM.put(EEPROM_DEPLOYMENT_TIME, deploymentT);
+
+            if (!log_parachute) {
+              log_parachute = true;
+              setFlag(EEPROM_LOG_PARACHUTE, true);
+              EEPROM.put(EEPROM_DEPLOYMENT_TIME, deploymentT);
+            }
             t = millis();
 
             if (detonationOn) {
@@ -391,17 +455,21 @@ void loop() {
             
             logIncrementalAltitude();
             writeAltMinMax();
-            
-            log_touchdown = true;
-            setFlag(EEPROM_LOG_TOUCHDOWN, true);
-            EEPROM.put(EEPROM_TOUCHDOWN_TIME, touchdownT);
 
+            if (!log_touchdown) {
+              log_touchdown = true;
+              setFlag(EEPROM_LOG_TOUCHDOWN, true);
+              EEPROM.put(EEPROM_TOUCHDOWN_TIME, touchdownT);
+            }
+            
             ledFlashOffTime = 1000;
             ledFlashOnTime = 1000;
             ledState = flash_on;
 
-            log_finaleepromwrite = true;
-            setFlag(EEPROM_LOG_FINALEEPROMWRITE, true);
+            if (!log_finaleepromwrite) {
+              log_finaleepromwrite = true;
+              setFlag(EEPROM_LOG_FINALEEPROMWRITE, true);
+            }
             flightState = complete;
             break;
 
@@ -416,21 +484,12 @@ void loop() {
 
         default:
             PrintSensorData(F("-Default Case-"));
-            log_default_case_error = true;
-            setFlag(EEPROM_DEFAULT_CASE_ERROR, true);
 
-            //Attempt to detect previous flightState and restore flightState
-            if (log_touchdown)
-                flightState = complete;
-            else if (log_parachute)
-                flightState = touchdown;
-            else if (log_tumble)
-                flightState = parachute;
-            else if (log_thrust)
-                flightState = tumble;
-            else
-                flightState = preLaunch;
-
+            if (!log_default_case_error) {
+              log_default_case_error = true;
+              setFlag(EEPROM_DEFAULT_CASE_ERROR, true);
+            }
+            recoverFlightState();
             break;
 
     }
@@ -491,38 +550,46 @@ void dataExport() {
     Serial.print(F("\t\tFinal EEPROM write:\t"));
     Serial.println(getFlag(EEPROM_LOG_FINALEEPROMWRITE) ? F("TRUE") : F("FALSE"));
 
+    Serial.print(F("\t\tPower loss:\t"));
+    Serial.println(getFlag(EEPROM_POWER_LOSS_RECOVERY) ? F("TRUE") : F("FALSE"));
+
     Serial.println(F("\n\tFlight Info:"));
+
+    uint32_t temp32;
+    uint16_t temp16;
     double tempDbl;
 
     Serial.print(F("\t\tApogee altitude:\t"));
-    EEPROM.get(EEPROM_APOGEE_ALT, tempDbl);
-    Serial.println(tempDbl);
+    EEPROM.get(EEPROM_APOGEE_ALT, temp16);
+    Serial.println(temp16);
 
     Serial.print(F("\t\tMax altitude:\t"));
-    EEPROM.get(EEPROM_MAX_ALT, tempDbl);
-    Serial.println(tempDbl);
+    EEPROM.get(EEPROM_MAX_ALT, temp16);
+    Serial.println(temp16);
 
     Serial.print(F("\t\tMin altitude:\t"));
-    EEPROM.get(EEPROM_MIN_ALT, tempDbl);
-    Serial.println(tempDbl);
-
-    uint32_t tempLong;
+    EEPROM.get(EEPROM_MIN_ALT, temp16);
+    Serial.println(temp16);
 
     Serial.print(F("\t\tTime to apogee:\t"));
-    EEPROM.get(EEPROM_APOGEE_TIME, tempLong);
-    Serial.print(tempLong / 1000.0);
+    EEPROM.get(EEPROM_APOGEE_TIME, temp32);
+    Serial.print(temp32 / 1000.0);
     Serial.println(F(" sec"));
 
     Serial.print(F("\t\tTime to deployment:\t"));
-    EEPROM.get(EEPROM_DEPLOYMENT_TIME, tempLong);
-    Serial.print(tempLong / 1000.0);
+    EEPROM.get(EEPROM_DEPLOYMENT_TIME, temp32);
+    Serial.print(temp32 / 1000.0);
     Serial.println(F(" sec"));
 
     Serial.print(F("\t\tTime to touchdown:\t"));
-    EEPROM.get(EEPROM_TOUCHDOWN_TIME, tempLong);
-    Serial.print(tempLong / 1000.0);
+    EEPROM.get(EEPROM_TOUCHDOWN_TIME, temp32);
+    Serial.print(temp32 / 1000.0);
     Serial.println(F(" sec"));
 
+    Serial.print(F("\t\tBaseline pressure:\t"));
+    EEPROM.get(EEPROM_PRESSURE_BASELINE, tempDbl);
+    Serial.println(tempDbl);
+    
     Serial.println();
 }
 
