@@ -32,3 +32,7 @@ LED output pin is set by "LED_PIN" in `config_launch.h` & `config_test.h`
 - Flashing 50ms on, 50ms off:     Clearing previous flight data (EEPROM)
 - Flashing 50ms on, 200ms off:    DataUpload mode - Retrieval of previous flight data (will not record new data until previous flight data is cleared)
 - Flashing 1000ms on, 1000ms off: Flight fully completed
+
+
+## Problems compiling?
+Please make sure you have version 1.8.5 or newer of the Arduino software. A library used by this code was changed in 1.6.2 (EEPROM.h) and does not compile with the earlier version. I do not know if it compiles with the 1.6.2 version having said this. It is only tested with 1.8.5.
