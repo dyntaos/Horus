@@ -3,10 +3,12 @@
 
 #undef ENABLE_SERIAL_DEBUGGING
 #define SERIAL_BAUD_RATE                38400
+#define DATA_UPLOAD_DELAY               5000
+
 
 #define LED_PIN                         13
 #define DETONATION_PIN                  11
-#define SWITCH_PIN                      12
+#define RESET_PIN                      12
 
 // Meters/Sec^2 (Upward)
 #define ACCEL_IGNITION_START            -12
@@ -26,6 +28,9 @@
 
 //Log the altitude to EEPROM every multiple of ALT_LOG_INTERVAL after ignitionT until EEPROM is full
 #define ALT_LOG_INTERVAL                200
+
+//How often the min and max altitudes will be written to EEPROM, but only if they have changed
+#define ALT_MIN_MAX_LOG_INTERVAL        150
 
 //Altitude in meters to deploy the parachute
 #define DEPLOY_ALTITUDE                 140

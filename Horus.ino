@@ -1,5 +1,83 @@
 #include "Horus.h"
 
+/********************************
+ *    Sensor Objects & Data     *
+ ********************************/
+
+SFE_BMP180 pressure;
+double baseline;
+MPU6050 mpu6050;
+
+/************************
+ *     Flight Data      *
+ ************************/
+
+uint32_t ignitionT;
+uint32_t apogeeT;
+uint32_t deploymentT;
+uint32_t touchdownT;
+int16_t apogeeAlt = 0;
+int16_t maxAlt = 0;
+int16_t writtenMaxAlt = 0;
+int16_t minAlt = 0;
+int16_t writtenMinAlt = 0;
+
+/************************
+ *     Misc Timers      *
+ ************************/
+
+uint32_t altPollT = 0;
+uint32_t auxPollT = 0;
+
+uint32_t altIncrementalLogTime = 0;
+uint32_t altMinMaxIncrementalLogTime = 0;
+
+/************************
+ *    Flight States     *
+ ************************/
+
+enum e_flightState {
+    sysError, dataUpload, erase, preLaunch, ignition, thrust, tumble, parachute, touchdown, complete
+};
+e_flightState flightState = preLaunch;
+bool detonationOn = false;
+int16_t alt = 0;
+uint32_t touchdownDetectT = 0;
+int16_t touchdownDetectAlt = 0;
+
+/************************
+ *    LED Settings      *
+ ************************/
+
+enum e_ledState {on, off, flash_on, flash_off};
+e_ledState ledState = off;
+unsigned long ledTime = 0;
+unsigned int ledFlashOnTime = 250;
+unsigned int ledFlashOffTime = 250;
+bool ledOn = false;
+
+/************************
+ *   Program logging    *
+ ************************/
+
+bool log_thrust = false;
+bool log_tumble = false;
+bool log_parachute = false;
+bool log_touchdown = false;
+bool log_syserror = false;
+
+bool log_apogee_timeout = false;
+bool log_finaleepromwrite = false;
+
+bool log_pressure_error = false;
+bool log_default_case_error = false;
+
+
+
+/************************/
+
+
+
 #ifdef ENABLE_SERIAL_DEBUGGING
     inline void PrintSensorData(const __FlashStringHelper* fState) {
         if (millis() - debugPollT >= DEBUG_POLL_TIME) {
@@ -16,7 +94,7 @@
             Serial.print("\t Z: ");
             Serial.print(getAccelZ());
             Serial.print("\tSwitch Input: ");
-            Serial.println(digitalRead(SWITCH_PIN)?"HIGH":"LOW");
+            Serial.println(digitalRead(RESET_PIN)?"HIGH":"LOW");
             debugPollT = millis();
         }
     }
@@ -30,12 +108,13 @@
 
 inline void logIncrementalAltitude() {
     if (millis() >= altIncrementalLogTime) {
-        altIncrementalLogTime = millis();
+        altIncrementalLogTime = millis() + ALT_LOG_INTERVAL;
         packEEPROM(alt);
     }
 }
 
-inline void writeAltToEEPROM() {
+inline void writeAltMinMax() {
+  if (millis() >= altMinMaxIncrementalLogTime){
     if (minAlt != writtenMinAlt) {
         EEPROM.put(EEPROM_MIN_ALT, minAlt);
         writtenMinAlt = minAlt;
@@ -44,6 +123,8 @@ inline void writeAltToEEPROM() {
         EEPROM.put(EEPROM_MAX_ALT, maxAlt);
         writtenMaxAlt = maxAlt;
     }
+    altMinMaxIncrementalLogTime = millis() + ALT_MIN_MAX_LOG_INTERVAL;
+  }
 }
 
 
@@ -53,7 +134,7 @@ void setup() {
 
     pinMode(LED_PIN, OUTPUT);
     pinMode(DETONATION_PIN, OUTPUT);
-    pinMode(SWITCH_PIN, INPUT);
+    pinMode(RESET_PIN, INPUT);
     digitalWrite(DETONATION_PIN, LOW);
 
     dataExport();
@@ -92,7 +173,7 @@ void setup() {
     debugPollT = ledTime;
 #endif
 
-    if (digitalRead(SWITCH_PIN) == HIGH) {
+    if (digitalRead(RESET_PIN) == HIGH) {
         //CLEAR EEPROM
         SerialDebugMsg(F("Clearing EEPROM..."));
         flightState = erase;
@@ -192,17 +273,24 @@ void loop() {
                 flightState = ignition;
                 ignitionT = millis();
                 altIncrementalLogTime = ignitionT + ALT_LOG_INTERVAL;
+                altMinMaxIncrementalLogTime = ignitionT + ALT_MIN_MAX_LOG_INTERVAL;
             }
             break;
 
         case ignition:
             PrintSensorData(F("Ignition"));
+            
             logIncrementalAltitude();
+            writeAltMinMax();
+            
             vAccel = getVerticalAccel();
+            
             if (vAccel > ACCEL_IGNITION_START) {
                 flightState = preLaunch;
                 ledState = on;
                 ignitionT = 0;
+                minAlt = 0;
+                maxAlt = 0;
                 resetPack();
             } else if ((millis() - ignitionT) >= IGNITION_SUSTAIN_T) {
                 flightState = thrust;
@@ -211,13 +299,16 @@ void loop() {
 
         case thrust:
             PrintSensorData(F("Thrust"));
+            
             logIncrementalAltitude();
+            writeAltMinMax();
+            
             accelScalar = getAccelerationScalar();
             log_thrust = true;
             setFlag(EEPROM_LOG_THRUST, true);
             t = millis();
 
-            if (alt > apogeeAlt) { //Floating point rounding errors are irrelavent and insignificant
+            if (alt > apogeeAlt) { //Floating point rounding errors are irrelevant and insignificant
                 apogeeAlt = alt;
                 apogeeT = t - ignitionT;
             }
@@ -226,7 +317,6 @@ void loop() {
             if (vAccel >= APOGEE_ACCEL_RANGE) {
                 flightState = tumble;
                 apogeeT = t - ignitionT;
-                writeAltToEEPROM();
             }
 
             //If max ignition + thrust time has elapsed (safety measure to ensure parachute is more likely to deploy if an error occurs)
@@ -235,13 +325,15 @@ void loop() {
                 setFlag(EEPROM_LOG_APOGEE_TIMEOUT, true);
                 flightState = tumble;
                 apogeeT = t - ignitionT;
-                writeAltToEEPROM();
             }
             break;
 
         case tumble:
             PrintSensorData(F("Tumble"));
+            
             logIncrementalAltitude();
+            writeAltMinMax();
+            
             log_tumble = true;
             setFlag(EEPROM_LOG_TUMBLE, true);
             EEPROM.put(EEPROM_APOGEE_ALT, apogeeAlt);
@@ -257,14 +349,16 @@ void loop() {
                 deploymentT = t - ignitionT;
                 touchdownDetectT = t;
                 touchdownDetectAlt = alt;
-                writeAltToEEPROM();
             }
 
             break;
 
         case parachute:
             PrintSensorData(F("Parachute"));
+            
             logIncrementalAltitude();
+            writeAltMinMax();
+            
             log_parachute = true;
             setFlag(EEPROM_LOG_PARACHUTE, true);
             EEPROM.put(EEPROM_DEPLOYMENT_TIME, deploymentT);
@@ -294,7 +388,10 @@ void loop() {
 
         case touchdown:
             PrintSensorData(F("Touchdown"));
+            
             logIncrementalAltitude();
+            writeAltMinMax();
+            
             log_touchdown = true;
             setFlag(EEPROM_LOG_TOUCHDOWN, true);
             EEPROM.put(EEPROM_TOUCHDOWN_TIME, touchdownT);
@@ -306,12 +403,14 @@ void loop() {
             log_finaleepromwrite = true;
             setFlag(EEPROM_LOG_FINALEEPROMWRITE, true);
             flightState = complete;
-            writeAltToEEPROM();
             break;
 
         case complete:
             PrintSensorData(F("Complete"));
+            
             logIncrementalAltitude();
+            writeAltMinMax();
+            
             //Sit idle
             break;
 

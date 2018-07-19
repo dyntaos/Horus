@@ -11,6 +11,8 @@
 #define EEPROM_APOGEE_ALT               12
 #define EEPROM_MAX_ALT                  16
 #define EEPROM_MIN_ALT                  20
+#define EEPROM_ALT_BASELINE             24
+#define EEPROM_BOOT_MS                  28
 
 // Bit addresses (relative to EEPROM_BASE_FLAG_ADDR)
 #define EEPROM_LOG_THRUST               0
@@ -25,10 +27,10 @@
 #define EEPROM_HASDATA                  9
 
 // EEPROM Values (Not addresses)
-#define EEPROM_BASE_FLAG_ADDR           24
+#define EEPROM_BASE_FLAG_ADDR           30
 #define EEPROM_MAX_LENGTH               1023
 #define EEPROM_RESET_DELAY              10000
-#define EEPROM_ALT_LOG_START            26
+#define EEPROM_ALT_LOG_START            32
 #define EEPROM_ALT_LOG_END              1023
 
 
