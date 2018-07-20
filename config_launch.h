@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define HORUS_CONFIG_NAME               "Launch"
+
 #undef ENABLE_SERIAL_DEBUGGING
 #define SERIAL_BAUD_RATE                38400
 #define DATA_UPLOAD_DELAY               5000
@@ -11,7 +13,7 @@
 #define BUTTON_PIN                      12
 
 //How long the button must be depressed during boot (actual time will be slightly longer, as this does not include initialization time) to clear the EEPROM (ms)
-#define EEPROM_RESET_TIME               5000
+#define EEPROM_RESET_TIME               6000
 
 // Meters/Sec^2 (Upward)
 #define ACCEL_IGNITION_START            -12
@@ -19,8 +21,9 @@
 // Time period acceleration must be sustained for to move to thrust state (milliseconds)
 #define IGNITION_SUSTAIN_T              300
 
-// Apogee detection acceleration range (meters/second^2)
-#define APOGEE_ACCEL_RANGE              -12
+// Apogee detection acceleration range +/- (meters/second^2) of accel point
+#define APOGEE_ACCEL_RANGE              3
+#define APOGEE_ACCEL_POINT              0
 
 //Expect deployment at 7400 ms to 7480 ms after ignitionT (assuming ignition is detected precisely)
 //This long after ignitionT, flightState will automatically move to tumble

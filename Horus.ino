@@ -70,6 +70,7 @@ bool log_parachute = false;
 bool log_touchdown = false;
 bool log_syserror = false;
 
+bool log_has_data = false;
 bool log_apogee_timeout = false;
 bool log_finaleepromwrite = false;
 
@@ -84,7 +85,7 @@ bool log_default_case_error = false;
 
 #ifdef ENABLE_SERIAL_DEBUGGING
     inline void PrintSensorData(const __FlashStringHelper* fState) {
-        if (millis() - debugPollT >= DEBUG_POLL_TIME) {
+        //if (millis() - debugPollT >= DEBUG_POLL_TIME) {
             Serial.print("Flight State: ");
             Serial.print(fState);
             Serial.print("\tAltitude: ");
@@ -97,10 +98,10 @@ bool log_default_case_error = false;
             Serial.print(getAccelY());
             Serial.print("\t Z: ");
             Serial.print(getAccelZ());
-            Serial.print("\tSwitch Input: ");
+            Serial.print("\tButton Input: ");
             Serial.println(digitalRead(BUTTON_PIN)?"HIGH":"LOW");
-            debugPollT = millis();
-        }
+            //debugPollT = millis();
+        //}
     }
 
     #define SerialDebugMsg(msg)             Serial.println(msg)
@@ -154,6 +155,9 @@ void setup() {
     pinMode(DETONATION_PIN, OUTPUT);
     pinMode(BUTTON_PIN, INPUT);
     digitalWrite(DETONATION_PIN, LOW);
+
+    SerialDebugMsg(F("Horus configuration:"));
+    SerialDebugMsg(F(HORUS_CONFIG_NAME));
     
     if (digitalRead(BUTTON_PIN) == HIGH) {
         //dataUpload mode (to select either dataUpload or erase)
@@ -178,6 +182,7 @@ void setup() {
         log_parachute = getFlag(EEPROM_LOG_PARACHUTE);
         log_touchdown = getFlag(EEPROM_LOG_TOUCHDOWN);
         log_syserror = getFlag(EEPROM_LOG_SYSERROR);
+        log_has_data = getFlag(EEPROM_HASDATA);
         log_apogee_timeout = getFlag(EEPROM_LOG_APOGEE_TIMEOUT);
         log_finaleepromwrite = getFlag(EEPROM_LOG_FINALEEPROMWRITE);
         log_pressure_error = getFlag(EEPROM_PRESSURE_ERROR);
@@ -239,7 +244,6 @@ void setup() {
     
     if (flightState == preLaunch) {
         ledState = on;
-        setFlag(EEPROM_HASDATA, true);
     }
     
 #ifndef ENABLE_SERIAL_DEBUGGING
@@ -252,9 +256,9 @@ void loop() {
     uint32_t t;
     uint16_t accelScalar;
 
-    if (ledState != off)
+    if (ledState != off) {
         flashLED();
-
+    }
     t = millis();
 
     if ((t - altPollT) > ALT_POLL_TIME) {
@@ -336,7 +340,7 @@ void loop() {
 
         case ignition:
             PrintSensorData(F("Ignition"));
-            
+
             logIncrementalAltitude();
             writeAltMinMax();
             
@@ -356,7 +360,11 @@ void loop() {
 
         case thrust:
             PrintSensorData(F("Thrust"));
-            
+
+            if (!log_has_data) {
+              setFlag(EEPROM_HASDATA, true);
+              log_has_data = true;
+            }
             logIncrementalAltitude();
             writeAltMinMax();
             
@@ -368,13 +376,12 @@ void loop() {
             accelScalar = getAccelerationScalar();
             t = millis();
 
-            if (alt > apogeeAlt) { //Floating point rounding errors are irrelevant and insignificant
+            if (alt > apogeeAlt) {
                 apogeeAlt = alt;
                 apogeeT = t - ignitionT;
             }
-
-            vAccel = getVerticalAccel();
-            if (vAccel >= APOGEE_ACCEL_RANGE) {
+            
+            if (accelScalar <= APOGEE_ACCEL_POINT + APOGEE_ACCEL_RANGE) {
                 flightState = tumble;
                 apogeeT = t - ignitionT;
             }
